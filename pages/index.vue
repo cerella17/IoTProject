@@ -13,25 +13,26 @@
         <ul class="space-y-3">
           <li
             v-for="sensore in sensoriTemp"
+            :key="sensore.id"
             class="flex justify-between p-3 rounded-lg bg-[#0c0c0c]/50"
           >
             <div class="flex items-center space-x-2">
               <Icon name="mdi:server" class="text-gray-400 size-5" />
-              <span class="text-gray-300">{{ sensore.nome }}</span>
+              <span class="text-gray-300"
+                >{{ sensore.id_sensore }} - {{ sensore.nome_stanza }}</span
+              >
               <Icon
-                v-if="sensore.stato == 'online'"
                 name="ci:dot-05-xl"
-                class="text-green-500 size-5"
-              />
-              <Icon
-                v-else-if="sensore.stato == 'offline'"
-                name="ci:dot-05-xl"
-                class="text-red-600 size-5"
+                :class="
+                  sensore.attivo === false ? 'text-red-600' : 'text-green-500'
+                "
+                class="size-5"
               />
             </div>
-            <span class="font-medium text-blue-400"
-              >{{ sensore.temperatura }}°C</span
-            >
+            <span class="font-medium text-blue-400" v-if="sensore.valore">
+              {{ sensore.valore }}°C
+            </span>
+            <span class="font-medium text-red-400" v-else> N/D </span>
           </li>
         </ul>
       </div>
@@ -47,22 +48,26 @@
         <ul class="space-y-3">
           <li
             v-for="sensore in sensoriFumo"
+            :key="sensore.id"
             class="flex justify-between p-3 rounded-lg bg-[#0c0c0c]/50"
           >
             <div class="flex items-center space-x-2">
               <Icon name="mdi:smoke" class="text-gray-400 size-5" />
-              <span class="text-gray-300">{{ sensore.nome }}</span>
+              <span class="text-gray-300"
+                >{{ sensore.id_sensore }} - {{ sensore.nome_stanza }}</span
+              >
               <Icon
-                v-if="sensore.stato == 'online'"
                 name="ci:dot-05-xl"
-                class="text-green-500 size-5"
-              />
-              <Icon
-                v-else-if="sensore.stato == 'offline'"
-                name="ci:dot-05-xl"
-                class="text-red-600 size-5"
+                :class="
+                  sensore.attivo === false ? 'text-red-600' : 'text-green-500'
+                "
+                class="size-5"
               />
             </div>
+            <span class="font-medium text-orange-400" v-if="sensore.valore">
+              {{ sensore.valore }}
+            </span>
+            <span class="font-medium text-red-400" v-else> N/D </span>
           </li>
         </ul>
       </div>
@@ -131,33 +136,20 @@
 </template>
 
 <script lang="ts" setup>
-const sensoriTemp = [
-  {
-    id: 1,
-    nome: "Stanza Server",
-    temperatura: 25,
-    stato: "online",
-  },
-  {
-    id: 2,
-    nome: "Sensore 2",
-    temperatura: 30,
-    stato: "offline",
-  },
-];
+import { ref, onMounted, onUnmounted } from "vue";
 
-const sensoriFumo = [
-  {
-    id: 1,
-    nome: "Sensore Fumo 1",
-    stato: "online",
-  },
-  {
-    id: 2,
-    nome: "Sensore Fumo 2",
-    stato: "offline",
-  },
-];
+interface Sensore {
+  id: number;
+  id_sensore: string;
+  tipo: string;
+  valore: string | null;
+  stanza: number;
+  nome_stanza: string;
+  attivo: boolean;
+}
+
+const sensoriTemp = ref<Sensore[]>([]);
+const sensoriFumo = ref<Sensore[]>([]);
 
 const autorizzazioni = [
   {
@@ -197,4 +189,33 @@ const autorizzazioni = [
     autorizzata: false,
   },
 ];
+
+let intervalId: NodeJS.Timeout | null = null;
+
+async function fetchSensoriData() {
+  try {
+    const response = await fetch("/api/get-all-sensori");
+    const data: Sensore[] = await response.json();
+
+    // Filtra i sensori per tipo
+    sensoriTemp.value = data.filter(
+      (sensore) => sensore.tipo === "temperatura"
+    );
+    sensoriFumo.value = data.filter((sensore) => sensore.tipo === "smoke");
+  } catch (error) {
+    console.error("Errore nel recupero dei dati:", error);
+  }
+}
+
+onMounted(() => {
+  fetchSensoriData();
+
+  intervalId = setInterval(fetchSensoriData, 20000);
+});
+
+onUnmounted(() => {
+  if (intervalId !== null) {
+    clearInterval(intervalId);
+  }
+});
 </script>
