@@ -10,6 +10,11 @@ const options = [
     to: "/autorizzazioni",
     icon: "ic:sharp-manage-accounts",
   },
+  {
+    name: "Accessi",
+    to: "/accessi",
+    icon: "ic:round-security",
+  },
 ];
 
 const showSidebar = ref(false);

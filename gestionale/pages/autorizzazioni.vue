@@ -1,41 +1,115 @@
 <script setup lang="ts">
-const dipendenti = ref([
+interface Dipendente {
+  id: number;
+  nome: string;
+  cognome: string;
+  rfid: string;
+  stanze: string[];
+}
+
+const dipendenti = ref<Dipendente[]>([
   {
     id: 1,
-    nome: "Mario Rossi",
-    livelloAutorizzazione: "Admin",
-    stanza: "Server Room",
+    nome: "Mario",
+    cognome: "Rossi",
+    rfid: "A1B2C3D4",
+    stanze: ["Server Room", "Magazzino"],
   },
   {
     id: 2,
-    nome: "Giovanni Bianchi",
-    livelloAutorizzazione: "User",
-    stanza: "Magazzino",
+    nome: "Giovanni",
+    cognome: "Bianchi",
+    rfid: "E5F6G7H8",
+    stanze: ["Magazzino"],
   },
   {
     id: 3,
-    nome: "Elisa Verdi",
-    livelloAutorizzazione: "SuperUser",
-    stanza: "Sala Riunioni",
+    nome: "Elisa",
+    cognome: "Verdi",
+    rfid: "I9J0K1L2",
+    stanze: ["Server Room"],
   },
 ]);
 
+const stanzeDisponibili = [
+  "Server Room",
+  "Magazzino",
+  "Sala Riunioni",
+  "Ufficio Tecnico",
+  "Laboratorio",
+];
+
 // Variabili per gestire il modale
 const mostraModale = ref(false);
-const dipendenteSelezionato = ref<any>(null); // Puoi tipizzare meglio se preferisci
+const dipendenteSelezionato = ref<Dipendente | null>(null);
 
 // Funzione per aprire il modale
-const apriModale = (dipendente: any) => {
-  dipendenteSelezionato.value = { ...dipendente }; // Copia dell'oggetto per evitare modifiche dirette
+const apriModale = (dipendente?: Dipendente) => {
+  if (dipendente) {
+    dipendenteSelezionato.value = { ...dipendente };
+  } else {
+    dipendenteSelezionato.value = {
+      id: dipendenti.value.length + 1,
+      nome: "",
+      cognome: "",
+      rfid: "",
+      stanze: [],
+    };
+  }
   mostraModale.value = true;
 };
 
 // Funzione per salvare le modifiche
-const salvaModifiche = () => {};
+const salvaModifiche = async () => {
+  if (!dipendenteSelezionato.value) return;
 
-// Funzione per chiudere il modale senza salvare
+  try {
+    const index = dipendenti.value.findIndex(
+      (d) => d.id === dipendenteSelezionato.value?.id
+    );
+
+    if (index === -1) {
+      // Nuovo dipendente
+      await fetch("/api/blockchain/create-user", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          rfid: dipendenteSelezionato.value.rfid,
+          nome: `${dipendenteSelezionato.value.nome} ${dipendenteSelezionato.value.cognome}`,
+          stanze: dipendenteSelezionato.value.stanze,
+        }),
+      });
+
+      dipendenti.value.push(dipendenteSelezionato.value);
+    } else {
+      // Aggiornamento dipendente esistente
+      await fetch("/api/blockchain/update-permissions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          rfid: dipendenteSelezionato.value.rfid,
+          stanze: dipendenteSelezionato.value.stanze,
+        }),
+      });
+
+      dipendenti.value[index] = dipendenteSelezionato.value;
+    }
+
+    mostraModale.value = false;
+  } catch (error) {
+    console.error("Errore nel salvataggio:", error);
+    // Qui potresti aggiungere una notifica di errore all'utente
+  }
+};
+
+// Funzione per chiudere il modale
 const chiudiModale = () => {
   mostraModale.value = false;
+  dipendenteSelezionato.value = null;
 };
 
 // Aggiungiamo una funzione per ottenere il colore del livello di autorizzazione
@@ -54,8 +128,11 @@ const getLivelloColor = (livello: string) => {
 <template>
   <div class="space-y-6">
     <div class="flex items-center justify-between">
-      <h1 class="text-2xl font-bold text-white">Gestione Autorizzazioni</h1>
+      <h1 class="text-2xl font-bold text-white">
+        Gestione Autorizzazioni RFID
+      </h1>
       <button
+        @click="apriModale()"
         class="px-4 py-2 text-sm font-medium transition-all rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500/20"
       >
         <Icon name="ic:baseline-person-add" class="size-5" />
@@ -68,8 +145,8 @@ const getLivelloColor = (livello: string) => {
           <tr>
             <th class="px-6 py-4 font-medium text-left">ID</th>
             <th class="px-6 py-4 font-medium text-left">Nome</th>
-            <th class="px-6 py-4 font-medium text-left">Livello</th>
-            <th class="px-6 py-4 font-medium text-left">Stanza</th>
+            <th class="px-6 py-4 font-medium text-left">RFID</th>
+            <th class="px-6 py-4 font-medium text-left">Stanze Autorizzate</th>
             <th class="px-6 py-4 font-medium text-center">Azioni</th>
           </tr>
         </thead>
@@ -90,26 +167,27 @@ const getLivelloColor = (livello: string) => {
                     class="size-5 text-gray-400"
                   />
                 </div>
-                {{ dipendente.nome }}
+                {{ dipendente.nome }} {{ dipendente.cognome }}
               </div>
-            </td>
-            <td class="px-6 py-4">
-              <span
-                :class="[
-                  'px-3 py-1 rounded-full text-xs font-medium',
-                  getLivelloColor(dipendente.livelloAutorizzazione),
-                ]"
-              >
-                {{ dipendente.livelloAutorizzazione }}
-              </span>
             </td>
             <td class="px-6 py-4">
               <div class="flex items-center gap-2">
                 <Icon
-                  name="ic:baseline-meeting-room"
+                  name="mdi:card-account-details"
                   class="size-5 text-gray-500"
                 />
-                {{ dipendente.stanza }}
+                {{ dipendente.rfid }}
+              </div>
+            </td>
+            <td class="px-6 py-4">
+              <div class="flex flex-wrap gap-2">
+                <span
+                  v-for="stanza in dipendente.stanze"
+                  :key="stanza"
+                  class="px-2 py-1 text-xs font-medium rounded-full bg-red-500/10 text-red-500"
+                >
+                  {{ stanza }}
+                </span>
               </div>
             </td>
             <td class="px-6 py-4">
@@ -147,7 +225,9 @@ const getLivelloColor = (livello: string) => {
         class="w-full max-w-md p-6 space-y-4 rounded-xl bg-[#1a1a1a] border border-white/5"
       >
         <div class="flex items-center justify-between">
-          <h2 class="text-xl font-bold text-white">Modifica Autorizzazione</h2>
+          <h2 class="text-xl font-bold text-white">
+            {{ dipendenteSelezionato?.id ? "Modifica" : "Nuovo" }} Dipendente
+          </h2>
           <button @click="chiudiModale" class="p-2 rounded-lg hover:bg-white/5">
             <Icon name="ic:baseline-close" class="size-6 text-gray-400" />
           </button>
@@ -157,7 +237,25 @@ const getLivelloColor = (livello: string) => {
           <div>
             <label class="block mb-2 text-sm text-gray-400">Nome</label>
             <input
-              v-model="dipendenteSelezionato.nome"
+              v-model="dipendenteSelezionato!.nome"
+              type="text"
+              class="w-full px-4 py-2 rounded-lg bg-[#0c0c0c] border border-white/5 text-white focus:outline-none focus:border-red-500"
+            />
+          </div>
+
+          <div>
+            <label class="block mb-2 text-sm text-gray-400">Cognome</label>
+            <input
+              v-model="dipendenteSelezionato!.cognome"
+              type="text"
+              class="w-full px-4 py-2 rounded-lg bg-[#0c0c0c] border border-white/5 text-white focus:outline-none focus:border-red-500"
+            />
+          </div>
+
+          <div>
+            <label class="block mb-2 text-sm text-gray-400">RFID</label>
+            <input
+              v-model="dipendenteSelezionato!.rfid"
               type="text"
               class="w-full px-4 py-2 rounded-lg bg-[#0c0c0c] border border-white/5 text-white focus:outline-none focus:border-red-500"
             />
@@ -165,25 +263,26 @@ const getLivelloColor = (livello: string) => {
 
           <div>
             <label class="block mb-2 text-sm text-gray-400"
-              >Livello Autorizzazione</label
+              >Stanze Autorizzate</label
             >
-            <select
-              v-model="dipendenteSelezionato.livelloAutorizzazione"
-              class="w-full px-4 py-2 rounded-lg bg-[#0c0c0c] border border-white/5 text-white focus:outline-none focus:border-red-500"
-            >
-              <option value="Admin">Admin</option>
-              <option value="SuperUser">SuperUser</option>
-              <option value="User">User</option>
-            </select>
-          </div>
-
-          <div>
-            <label class="block mb-2 text-sm text-gray-400">Stanza</label>
-            <input
-              v-model="dipendenteSelezionato.stanza"
-              type="text"
-              class="w-full px-4 py-2 rounded-lg bg-[#0c0c0c] border border-white/5 text-white focus:outline-none focus:border-red-500"
-            />
+            <div class="space-y-2">
+              <div
+                v-for="stanza in stanzeDisponibili"
+                :key="stanza"
+                class="flex items-center gap-2"
+              >
+                <input
+                  type="checkbox"
+                  :id="stanza"
+                  :value="stanza"
+                  v-model="dipendenteSelezionato!.stanze"
+                  class="rounded border-white/5 bg-[#0c0c0c] text-red-500 focus:ring-red-500"
+                />
+                <label :for="stanza" class="text-sm text-gray-300">{{
+                  stanza
+                }}</label>
+              </div>
+            </div>
           </div>
         </div>
 
