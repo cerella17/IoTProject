@@ -31,13 +31,7 @@ const dipendenti = ref<Dipendente[]>([
   },
 ]);
 
-const stanzeDisponibili = [
-  "Server Room",
-  "Magazzino",
-  "Sala Riunioni",
-  "Ufficio Tecnico",
-  "Laboratorio",
-];
+const stanzeDisponibili = ["Server Room", "Magazzino"];
 
 // Variabili per gestire il modale
 const mostraModale = ref(false);

@@ -9,7 +9,7 @@ const idl = JSON.parse(
 );
 
 // Inserisci qui il tuo Program ID
-const programId = new PublicKey("H8uo3xt2M9uyviHJauQ5XpBAAzYnQcV4FPnNmaSL9YYG");
+const programId = new PublicKey("2mfaAWB2W9BXFS2DvyEZNK1UaVBNmwASFrEaDnB6GpeX");
 
 // Percorso al file delle chiavi del wallet
 const walletKeypairPath = path.join(__dirname, "wallet-keypair.json");
@@ -128,41 +128,41 @@ async function aggiornaPermessi(uid, nuoviPermessi) {
   }
 }
 
-// Esempio di utilizzo:
+//Esempio di utilizzo:
 
-// (async () => {
-//   // UID per l'utente
-//   const uid = "user8234568889999999999";
-//   console.log(uid);
+(async () => {
+  // UID per l'utente
+  const uid = "4b1dc31";
+  console.log(uid);
 
-//   // Permessi iniziali
-//   const permessiIniziali = [
-//     { areaId: 1, accessoConsentito: true },
-//     { areaId: 2, accessoConsentito: false },
-//   ];
+  // Permessi iniziali
+  const permessiIniziali = [
+    { areaId: 1, accessoConsentito: true },
+    { areaId: 2, accessoConsentito: false },
+  ];
 
-//   // Crea un nuovo utente
-//   await creaUtente(uid, permessiIniziali);
-//   console.log("Utente creato");
+  // Crea un nuovo utente
+  await creaUtente(uid, permessiIniziali);
+  console.log("Utente creato");
 
-//   // Verifica l'accesso all'area 1
-//   await verificaAccesso(uid, 1);
+  // Verifica l'accesso all'area 1
+  await verificaAccesso(uid, 1);
 
-//   // Verifica l'accesso all'area 2
-//   await verificaAccesso(uid, 2);
+  // Verifica l'accesso all'area 2
+  await verificaAccesso(uid, 2);
 
-//   // Aggiorna i permessi
-//   const nuoviPermessi = [
-//     { areaId: 1, accessoConsentito: true },
-//     { areaId: 2, accessoConsentito: true },
-//     { areaId: 3, accessoConsentito: false },
-//   ];
+  // Aggiorna i permessi
+  const nuoviPermessi = [
+    { areaId: 1, accessoConsentito: true },
+    { areaId: 2, accessoConsentito: true },
+    { areaId: 3, accessoConsentito: false },
+  ];
 
-//   await aggiornaPermessi(uid, nuoviPermessi);
+  await aggiornaPermessi(uid, nuoviPermessi);
 
-//   // Verifica l'accesso all'area 2 dopo l'aggiornamento dei permessi
-//   await verificaAccesso(uid, 2);
+  // Verifica l'accesso all'area 2 dopo l'aggiornamento dei permessi
+  await verificaAccesso(uid, 2);
 
-//   // Verifica l'accesso all'area 3
-//   await verificaAccesso(uid, 3);
-// })();
+  // Verifica l'accesso all'area 3
+  await verificaAccesso(uid, 3);
+})();

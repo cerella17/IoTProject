@@ -24,14 +24,20 @@
               <Icon
                 name="ci:dot-05-xl"
                 :class="
-                  sensore.attivo === false ? 'text-red-600' : 'text-green-500'
+                  sensore.attivo === false || sensore.valore === null
+                    ? 'text-red-600'
+                    : 'text-green-500'
                 "
                 class="size-5"
               />
             </div>
-            <span class="font-medium text-blue-400" v-if="sensore.valore">
+            <span
+              class="font-medium text-blue-400"
+              v-if="sensore.valore && sensore.attivo"
+            >
               {{ sensore.valore }}°C
             </span>
+
             <span class="font-medium text-red-400" v-else> N/D </span>
           </li>
         </ul>
@@ -155,7 +161,7 @@ const autorizzazioni = [
   {
     id: 1,
     nome: "Admin",
-    stanza: "Server",
+    stanza: "Server Room",
     autorizzata: true,
   },
   {
@@ -167,25 +173,24 @@ const autorizzazioni = [
   {
     id: 3,
     nome: "Marco",
-    stanza: "Sala riunioni",
+    stanza: "Server Room",
     autorizzata: true,
   },
   {
     id: 4,
     nome: "Luca",
-    stanza: "Ufficio",
+    stanza: "Server Room",
     autorizzata: false,
   },
   {
     id: 5,
     nome: "Giulia",
-    stanza: "Cucina",
+    stanza: "Server Room",
     autorizzata: true,
   },
   {
     id: 6,
-    nome: "Alessia",
-    stanza: "Bagno",
+    stanza: "Server Room",
     autorizzata: false,
   },
 ];
@@ -210,7 +215,7 @@ async function fetchSensoriData() {
 onMounted(() => {
   fetchSensoriData();
 
-  intervalId = setInterval(fetchSensoriData, 20000);
+  intervalId = setInterval(fetchSensoriData, 2000);
 });
 
 onUnmounted(() => {

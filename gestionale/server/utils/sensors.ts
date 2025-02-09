@@ -38,7 +38,7 @@ export async function getAllSensori() {
             WHEN NOW() - s.timestamp <= interval '30 seconds' THEN true 
             ELSE false 
           END as attivo,
-          ROW_NUMBER() OVER (PARTITION BY s.id_sensore ORDER BY s.id DESC) as rn
+          ROW_NUMBER() OVER (PARTITION BY s.id_sensore, s.stanza ORDER BY s.id DESC) as rn
         FROM sensori s
         JOIN stanze st ON s.stanza = st.id
       )

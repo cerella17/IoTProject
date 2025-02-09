@@ -1,1 +1,109 @@
-{"version":"0.1.0","name":"gestione_accessi","instructions":[{"name":"verificaAccesso","accounts":[{"name":"utente","isMut":true,"isSigner":false}],"args":[{"name":"areaId","type":"u8"}]},{"name":"aggiornaPermessi","accounts":[{"name":"amministratore","isMut":false,"isSigner":true},{"name":"utente","isMut":true,"isSigner":false}],"args":[{"name":"nuoviPermessi","type":{"vec":{"defined":"AreaPermesso"}}}]},{"name":"creaUtente","accounts":[{"name":"utente","isMut":true,"isSigner":false},{"name":"amministratore","isMut":true,"isSigner":true},{"name":"systemProgram","isMut":false,"isSigner":false}],"args":[{"name":"uid","type":"string"},{"name":"permessiIniziali","type":{"vec":{"defined":"AreaPermesso"}}}]}],"accounts":[{"name":"Utente","type":{"kind":"struct","fields":[{"name":"uid","type":"string"},{"name":"permessi","type":{"vec":{"defined":"AreaPermesso"}}},{"name":"ultimoEsito","type":"bool"}]}}],"types":[{"name":"AreaPermesso","type":{"kind":"struct","fields":[{"name":"areaId","type":"u8"},{"name":"accessoConsentito","type":"bool"}]}}]}
+{
+  "version": "0.1.0",
+  "name": "gestione_accessi",
+  "instructions": [
+    {
+      "name": "initializeAdmin",
+      "accounts": [
+        { "name": "adminState", "isMut": true, "isSigner": false },
+        { "name": "payer", "isMut": true, "isSigner": true },
+        { "name": "systemProgram", "isMut": false, "isSigner": false }
+      ],
+      "args": []
+    },
+    {
+      "name": "verificaAccesso",
+      "accounts": [{ "name": "utente", "isMut": true, "isSigner": false }],
+      "args": [
+        { "name": "uid", "type": "string" },
+        { "name": "areaId", "type": "u8" }
+      ]
+    },
+    {
+      "name": "aggiornaPermessi",
+      "accounts": [
+        { "name": "adminState", "isMut": false, "isSigner": false },
+        { "name": "utente", "isMut": true, "isSigner": false },
+        { "name": "amministratore", "isMut": true, "isSigner": true }
+      ],
+      "args": [
+        {
+          "name": "nuoviPermessi",
+          "type": { "vec": { "defined": "AreaPermesso" } }
+        }
+      ]
+    },
+    {
+      "name": "creaUtente",
+      "accounts": [
+        { "name": "utente", "isMut": true, "isSigner": false },
+        { "name": "adminState", "isMut": false, "isSigner": false },
+        { "name": "amministratore", "isMut": true, "isSigner": true },
+        { "name": "systemProgram", "isMut": false, "isSigner": false }
+      ],
+      "args": [
+        { "name": "uid", "type": "string" },
+        { "name": "nome", "type": "string" },
+        {
+          "name": "permessiIniziali",
+          "type": { "vec": { "defined": "AreaPermesso" } }
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "AdminState",
+      "type": {
+        "kind": "struct",
+        "fields": [{ "name": "adminAuthority", "type": "publicKey" }]
+      }
+    },
+    {
+      "name": "Utente",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "uid", "type": "string" },
+          { "name": "nome", "type": "string" },
+          {
+            "name": "permessi",
+            "type": { "vec": { "defined": "AreaPermesso" } }
+          },
+          { "name": "ultimoEsito", "type": "bool" }
+        ]
+      }
+    }
+  ],
+  "types": [
+    {
+      "name": "Accesso",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "uid", "type": "string" },
+          { "name": "areaId", "type": "u8" },
+          { "name": "esito", "type": "bool" },
+          { "name": "timestamp", "type": "i64" }
+        ]
+      }
+    },
+    {
+      "name": "AreaPermesso",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "areaId", "type": "u8" },
+          { "name": "accessoConsentito", "type": "bool" }
+        ]
+      }
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "Unauthorized",
+      "msg": "Non sei autorizzato ad eseguire questa operazione."
+    }
+  ]
+}

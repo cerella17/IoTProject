@@ -70,6 +70,8 @@ export async function createBlockchainUser(
       accessoConsentito: true,
     }));
 
+    console.log(permessiIniziali);
+
     const txSignature = await program.methods
       .creaUtente(rfid, nome, permessiIniziali)
       .accounts({
@@ -131,7 +133,7 @@ export async function verifyBlockchainAccess(rfid: string, areaId: number) {
   const userPDA = await getUserPDA(rfid);
 
   try {
-    const txSignature = await program.rpc.verificaAccesso("user123", 1, {
+    const txSignature = await program.rpc.verificaAccesso(rfid, 1, {
       accounts: {
         utente: userPDA,
       },
