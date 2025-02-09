@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { authClient } from "~/lib/auth-client.js";
 const options = [
   {
     name: "Home",
@@ -18,6 +19,12 @@ const options = [
 ];
 
 const showSidebar = ref(false);
+
+// Aggiungiamo la funzione di logout
+const handleLogout = async () => {
+  await authClient.signOut();
+  navigateTo("/login");
+};
 </script>
 
 <template>
@@ -53,6 +60,18 @@ const showSidebar = ref(false);
             />
           </NuxtLink>
         </div>
+
+        <!-- Logout button -->
+        <button
+          @click="handleLogout"
+          class="mt-auto flex items-center justify-center transition-all p-2 rounded-lg hover:bg-white/5 group"
+        >
+          <Icon
+            name="ic:round-logout"
+            size="30px"
+            class="text-gray-400 group-hover:text-red-500"
+          />
+        </button>
       </div>
     </div>
 

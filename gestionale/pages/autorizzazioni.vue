@@ -1,102 +1,109 @@
 <script setup lang="ts">
-interface Dipendente {
-  id: number;
-  nome: string;
-  cognome: string;
-  rfid: string;
-  stanze: string[];
+interface Permesso {
+  areaId: number;
+  accessoConsentito: boolean;
 }
 
-const dipendenti = ref<Dipendente[]>([
-  {
-    id: 1,
-    nome: "Mario",
-    cognome: "Rossi",
-    rfid: "A1B2C3D4",
-    stanze: ["Server Room", "Magazzino"],
-  },
-  {
-    id: 2,
-    nome: "Giovanni",
-    cognome: "Bianchi",
-    rfid: "E5F6G7H8",
-    stanze: ["Magazzino"],
-  },
-  {
-    id: 3,
-    nome: "Elisa",
-    cognome: "Verdi",
-    rfid: "I9J0K1L2",
-    stanze: ["Server Room"],
-  },
-]);
+interface Dipendente {
+  uid: string;
+  nome: string;
+  permessi: Permesso[];
+  pubkey: string;
+}
 
-const stanzeDisponibili = ["Server Room", "Magazzino"];
+const dipendenti = ref<Dipendente[]>([]);
+const stanzeDisponibili = [
+  { id: 1, nome: "Server Room" },
+  { id: 2, nome: "Magazzino" },
+];
 
 // Variabili per gestire il modale
 const mostraModale = ref(false);
 const dipendenteSelezionato = ref<Dipendente | null>(null);
 
+// Funzione per caricare i dipendenti dalla blockchain
+const caricaDipendenti = async () => {
+  try {
+    const response = await fetch("/api/blockchain/get-all-users");
+    const result = await response.json();
+    if (result.success) {
+      dipendenti.value = result.data;
+    }
+  } catch (error) {
+    console.error("Errore nel caricamento dei dipendenti:", error);
+  }
+};
+
+// Carica i dipendenti all'avvio
+onMounted(() => {
+  caricaDipendenti();
+});
+
+// Funzione per ottenere le stanze autorizzate di un dipendente
+const getStanzeAutorizzate = (permessi: Permesso[]) => {
+  return permessi
+    .filter((p) => p.accessoConsentito)
+    .map((p) => stanzeDisponibili.find((s) => s.id === p.areaId)?.nome)
+    .filter(Boolean);
+};
+
 // Funzione per aprire il modale
 const apriModale = (dipendente?: Dipendente) => {
   if (dipendente) {
-    dipendenteSelezionato.value = { ...dipendente };
+    // Crea una copia profonda del dipendente
+    dipendenteSelezionato.value = JSON.parse(JSON.stringify(dipendente));
+
+    // Assicurati che tutti i permessi siano presenti
+    stanzeDisponibili.forEach((stanza) => {
+      const permessoEsistente = dipendenteSelezionato.value.permessi.find(
+        (p) => p.areaId === stanza.id
+      );
+      if (!permessoEsistente) {
+        dipendenteSelezionato.value.permessi.push({
+          areaId: stanza.id,
+          accessoConsentito: false,
+        });
+      }
+    });
   } else {
+    // Crea un nuovo dipendente con tutti i permessi inizializzati
     dipendenteSelezionato.value = {
-      id: dipendenti.value.length + 1,
+      uid: "",
       nome: "",
-      cognome: "",
-      rfid: "",
-      stanze: [],
+      permessi: stanzeDisponibili.map((stanza) => ({
+        areaId: stanza.id,
+        accessoConsentito: false,
+      })),
+      pubkey: "",
     };
   }
   mostraModale.value = true;
 };
 
-// Funzione per salvare le modifiche
+// Modifica la funzione salvaModifiche per il nuovo formato
 const salvaModifiche = async () => {
   if (!dipendenteSelezionato.value) return;
 
   try {
-    const index = dipendenti.value.findIndex(
-      (d) => d.id === dipendenteSelezionato.value?.id
-    );
+    const stanzeIds = dipendenteSelezionato.value.permessi
+      .filter((p) => p.accessoConsentito)
+      .map((p) => p.areaId);
 
-    if (index === -1) {
-      // Nuovo dipendente
-      await fetch("/api/blockchain/create-user", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          rfid: dipendenteSelezionato.value.rfid,
-          nome: `${dipendenteSelezionato.value.nome} ${dipendenteSelezionato.value.cognome}`,
-          stanze: dipendenteSelezionato.value.stanze,
-        }),
-      });
+    await fetch("/api/blockchain/update-permissions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        rfid: dipendenteSelezionato.value.uid,
+        stanze: stanzeIds,
+      }),
+    });
 
-      dipendenti.value.push(dipendenteSelezionato.value);
-    } else {
-      // Aggiornamento dipendente esistente
-      await fetch("/api/blockchain/update-permissions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          rfid: dipendenteSelezionato.value.rfid,
-          stanze: dipendenteSelezionato.value.stanze,
-        }),
-      });
-
-      dipendenti.value[index] = dipendenteSelezionato.value;
-    }
-
+    await caricaDipendenti();
     mostraModale.value = false;
   } catch (error) {
     console.error("Errore nel salvataggio:", error);
-    // Qui potresti aggiungere una notifica di errore all'utente
   }
 };
 
@@ -137,9 +144,8 @@ const getLivelloColor = (livello: string) => {
       <table class="w-full text-sm text-gray-300">
         <thead class="bg-[#0c0c0c]">
           <tr>
-            <th class="px-6 py-4 font-medium text-left">ID</th>
-            <th class="px-6 py-4 font-medium text-left">Nome</th>
             <th class="px-6 py-4 font-medium text-left">RFID</th>
+            <th class="px-6 py-4 font-medium text-left">Nome</th>
             <th class="px-6 py-4 font-medium text-left">Stanze Autorizzate</th>
             <th class="px-6 py-4 font-medium text-center">Azioni</th>
           </tr>
@@ -147,10 +153,18 @@ const getLivelloColor = (livello: string) => {
         <tbody class="divide-y divide-white/5">
           <tr
             v-for="dipendente in dipendenti"
-            :key="dipendente.id"
+            :key="dipendente.uid"
             class="transition-colors hover:bg-white/5"
           >
-            <td class="px-6 py-4">#{{ dipendente.id }}</td>
+            <td class="px-6 py-4">
+              <div class="flex items-center gap-2">
+                <Icon
+                  name="mdi:card-account-details"
+                  class="size-5 text-gray-500"
+                />
+                {{ dipendente.uid }}
+              </div>
+            </td>
             <td class="px-6 py-4">
               <div class="flex items-center gap-3">
                 <div
@@ -161,22 +175,13 @@ const getLivelloColor = (livello: string) => {
                     class="size-5 text-gray-400"
                   />
                 </div>
-                {{ dipendente.nome }} {{ dipendente.cognome }}
-              </div>
-            </td>
-            <td class="px-6 py-4">
-              <div class="flex items-center gap-2">
-                <Icon
-                  name="mdi:card-account-details"
-                  class="size-5 text-gray-500"
-                />
-                {{ dipendente.rfid }}
+                {{ dipendente.nome }}
               </div>
             </td>
             <td class="px-6 py-4">
               <div class="flex flex-wrap gap-2">
                 <span
-                  v-for="stanza in dipendente.stanze"
+                  v-for="stanza in getStanzeAutorizzate(dipendente.permessi)"
                   :key="stanza"
                   class="px-2 py-1 text-xs font-medium rounded-full bg-red-500/10 text-red-500"
                 >
@@ -192,14 +197,6 @@ const getLivelloColor = (livello: string) => {
                 >
                   <Icon
                     name="ic:baseline-edit"
-                    class="size-5 text-gray-400 hover:text-red-500"
-                  />
-                </button>
-                <button
-                  class="p-2 transition-colors rounded-lg hover:bg-white/5"
-                >
-                  <Icon
-                    name="ic:baseline-delete"
                     class="size-5 text-gray-400 hover:text-red-500"
                   />
                 </button>
@@ -220,7 +217,7 @@ const getLivelloColor = (livello: string) => {
       >
         <div class="flex items-center justify-between">
           <h2 class="text-xl font-bold text-white">
-            {{ dipendenteSelezionato?.id ? "Modifica" : "Nuovo" }} Dipendente
+            {{ dipendenteSelezionato?.uid ? "Modifica" : "Nuovo" }} Dipendente
           </h2>
           <button @click="chiudiModale" class="p-2 rounded-lg hover:bg-white/5">
             <Icon name="ic:baseline-close" class="size-6 text-gray-400" />
@@ -229,27 +226,18 @@ const getLivelloColor = (livello: string) => {
 
         <div class="space-y-4">
           <div>
-            <label class="block mb-2 text-sm text-gray-400">Nome</label>
-            <input
-              v-model="dipendenteSelezionato!.nome"
-              type="text"
-              class="w-full px-4 py-2 rounded-lg bg-[#0c0c0c] border border-white/5 text-white focus:outline-none focus:border-red-500"
-            />
-          </div>
-
-          <div>
-            <label class="block mb-2 text-sm text-gray-400">Cognome</label>
-            <input
-              v-model="dipendenteSelezionato!.cognome"
-              type="text"
-              class="w-full px-4 py-2 rounded-lg bg-[#0c0c0c] border border-white/5 text-white focus:outline-none focus:border-red-500"
-            />
-          </div>
-
-          <div>
             <label class="block mb-2 text-sm text-gray-400">RFID</label>
             <input
-              v-model="dipendenteSelezionato!.rfid"
+              v-model="dipendenteSelezionato.uid"
+              type="text"
+              class="w-full px-4 py-2 rounded-lg bg-[#0c0c0c] border border-white/5 text-white focus:outline-none focus:border-red-500"
+            />
+          </div>
+
+          <div>
+            <label class="block mb-2 text-sm text-gray-400">Nome</label>
+            <input
+              v-model="dipendenteSelezionato.nome"
               type="text"
               class="w-full px-4 py-2 rounded-lg bg-[#0c0c0c] border border-white/5 text-white focus:outline-none focus:border-red-500"
             />
@@ -262,19 +250,24 @@ const getLivelloColor = (livello: string) => {
             <div class="space-y-2">
               <div
                 v-for="stanza in stanzeDisponibili"
-                :key="stanza"
+                :key="stanza.id"
                 class="flex items-center gap-2"
               >
                 <input
                   type="checkbox"
-                  :id="stanza"
-                  :value="stanza"
-                  v-model="dipendenteSelezionato!.stanze"
+                  :id="'stanza-' + stanza.id"
+                  v-model="
+                    dipendenteSelezionato.permessi[stanza.id - 1]
+                      .accessoConsentito
+                  "
                   class="rounded border-white/5 bg-[#0c0c0c] text-red-500 focus:ring-red-500"
                 />
-                <label :for="stanza" class="text-sm text-gray-300">{{
-                  stanza
-                }}</label>
+                <label
+                  :for="'stanza-' + stanza.id"
+                  class="text-sm text-gray-300"
+                >
+                  {{ stanza.nome }}
+                </label>
               </div>
             </div>
           </div>

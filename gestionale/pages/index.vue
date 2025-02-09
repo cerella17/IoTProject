@@ -70,7 +70,10 @@
                 class="size-5"
               />
             </div>
-            <span class="font-medium text-orange-400" v-if="sensore.valore">
+            <span
+              class="font-medium text-orange-400"
+              v-if="sensore.valore && sensore.attivo"
+            >
               {{ sensore.valore }}
             </span>
             <span class="font-medium text-red-400" v-else> N/D </span>

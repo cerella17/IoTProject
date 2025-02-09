@@ -147,3 +147,51 @@ export async function verifyBlockchainAccess(rfid: string, areaId: number) {
     throw error;
   }
 }
+
+export async function getBlockchainAccessHistory(rfid: string) {
+  try {
+    const accessLogPDA = await getAccessLogPDA();
+    const accessLogAccount = await program.account.accessLog.fetch(
+      accessLogPDA
+    );
+
+    if (!accessLogAccount) {
+      console.log("Nessun log trovato");
+      return null;
+    }
+
+    // Filtra i log per l'utente con il uid specificato (rfid)
+    const userLogs = accessLogAccount.logs.filter(
+      (log: any) => log.uid === rfid
+    );
+
+    console.log("Storico accessi per", rfid, ":", userLogs);
+    return userLogs;
+  } catch (error) {
+    console.error("Errore ottenimento storico accessi:", error);
+    throw error;
+  }
+}
+export async function getAllBlockchainUsers() {
+  try {
+    console.log("Recupero utenti dalla blockchain");
+    // Recupera tutti gli account di tipo Utente
+    const utenti = await program.account.utente.all();
+    // Mappa i dati per ottenere un array di oggetti con le proprietà desiderate
+    const utentiConPermessi = utenti.map((item) => {
+      const account = item.account;
+      return {
+        uid: account.uid,
+        nome: account.nome,
+        permessi: account.permessi, // Array dei permessi per area
+        ultimo_esito: account.ultimo_esito,
+        pubkey: item.publicKey.toString(),
+      };
+    });
+    console.log("Utenti recuperati:", utentiConPermessi);
+    return utentiConPermessi;
+  } catch (error) {
+    console.error("Errore nel recupero degli utenti:", error);
+    throw error;
+  }
+}
